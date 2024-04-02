@@ -1,0 +1,119 @@
+/*-----------------------------------------*\
+|  RGBController_CorsairVengeance.cpp       |
+|                                           |
+|  Generic RGB Interface for OpenAuraSDK    |
+|  Corsair Vengeance RGB driver             |
+|                                           |
+|  Adam Honse (CalcProgrammer1) 6/13/2019   |
+\*-----------------------------------------*/
+
+#include "RGBController_CorsairVengeance.h"
+
+/**------------------------------------------------------------------*\
+    @name Corsair Vengeance
+    @category RAM
+    @type SMBus
+    @save :robot:
+    @direct :x:
+    @effects :white_check_mark:
+    @detectors DetectCorsairVengeanceControllers
+    @comment
+\*-------------------------------------------------------------------*/
+
+RGBController_CorsairVengeance::RGBController_CorsairVengeance(CorsairVengeanceController* controller_ptr)
+{
+    controller  = controller_ptr;
+
+    name        = controller->GetDeviceName();
+    vendor      = "Corsair";
+    type        = DEVICE_TYPE_DRAM;
+    description = "Corsair Vengeance RGB Device";
+    location    = controller->GetDeviceLocation();
+
+    mode Static;
+    Static.name       = "Static";
+    Static.value      = CORSAIR_VENGEANCE_RGB_MODE_SINGLE;
+    Static.flags      = MODE_FLAG_HAS_PER_LED_COLOR;
+    Static.color_mode = MODE_COLORS_PER_LED;
+    modes.push_back(Static);
+
+    mode Fade;
+    Fade.name       = "Fade";
+    Fade.value      = CORSAIR_VENGEANCE_RGB_MODE_FADE;
+    Fade.flags      = MODE_FLAG_HAS_PER_LED_COLOR;
+    Fade.color_mode = MODE_COLORS_PER_LED;
+    modes.push_back(Fade);
+
+    mode Pulse;
+    Pulse.name       = "Pulse";
+    Pulse.value      = CORSAIR_VENGEANCE_RGB_MODE_PULSE;
+    Pulse.flags      = MODE_FLAG_HAS_PER_LED_COLOR;
+    Pulse.color_mode = MODE_COLORS_PER_LED;
+    modes.push_back(Pulse);
+
+    SetupZones();
+}
+
+RGBController_CorsairVengeance::~RGBController_CorsairVengeance()
+{
+    delete controller;
+}
+
+void RGBController_CorsairVengeance::SetupZones()
+{
+    /*---------------------------------------------------------*\
+    | Create a single zone                                      |
+    \*---------------------------------------------------------*/
+    zone new_zone;
+    new_zone.name       = "Corsair Zone";
+    new_zone.type       = ZONE_TYPE_SINGLE;
+    new_zone.leds_min   = controller->GetLEDCount();
+    new_zone.leds_max   = controller->GetLEDCount();
+    new_zone.leds_count = controller->GetLEDCount();
+    new_zone.matrix_map = NULL;
+    zones.push_back(new_zone);
+
+    /*---------------------------------------------------------*\
+    | Set up LEDs                                               |
+    \*---------------------------------------------------------*/
+    for(std::size_t led_idx = 0; led_idx < zones[0].leds_count; led_idx++)
+    {
+        led* new_led    = new led();
+        new_led->name   = "Corsair LED";
+        leds.push_back(*new_led);
+    }
+
+    SetupColors();
+}
+
+void RGBController_CorsairVengeance::ResizeZone(int /*zone*/, int /*new_size*/)
+{
+    /*---------------------------------------------------------*\
+    | This device does not support resizing zones               |
+    \*---------------------------------------------------------*/
+}
+
+void RGBController_CorsairVengeance::DeviceUpdateLEDs()
+{
+    RGBColor      color = colors[0];
+    unsigned char red   = RGBGetRValue(color);
+    unsigned char grn   = RGBGetGValue(color);
+    unsigned char blu   = RGBGetBValue(color);
+
+    controller->SetLEDColor(red, grn, blu);
+}
+
+void RGBController_CorsairVengeance::UpdateZoneLEDs(int /*zone*/)
+{
+    DeviceUpdateLEDs();
+}
+
+void RGBController_CorsairVengeance::UpdateSingleLED(int /*led*/)
+{
+    DeviceUpdateLEDs();
+}
+
+void RGBController_CorsairVengeance::DeviceUpdateMode()
+{
+    controller->SetMode(modes[active_mode].value);
+}
